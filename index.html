@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chronos // Weekly Productivity Planner</title>
+    <!-- Google Fonts: Outfit for clean display, Plus Jakarta Sans for crisp UI reading -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-background">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="app-layout">
+        <!-- SIDEBAR -->
+        <aside class="app-sidebar glass-card" id="app-sidebar">
+            <div class="sidebar-header">
+                <div class="logo-area">
+                    <div class="logo-icon">
+                        <i data-lucide="clock-4"></i>
+                    </div>
+                    <div class="logo-text-group">
+                        <h2 class="logo-text">Chronos</h2>
+                        <span class="logo-subtext">Productivity</span>
+                    </div>
+                </div>
+                <button id="sidebar-toggle-btn" class="icon-btn tooltip" data-tooltip="Collapse Sidebar">
+                    <i data-lucide="chevron-left"></i>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="sidebar-tab active" data-tab="weekly-board">
+                    <i data-lucide="calendar"></i>
+                    <span class="tab-label">Weekly Board</span>
+                </button>
+                <button class="sidebar-tab" data-tab="habits">
+                    <i data-lucide="heart"></i>
+                    <span class="tab-label">Habit Tracker</span>
+                </button>
+                <button class="sidebar-tab" data-tab="notes">
+                    <i data-lucide="file-text"></i>
+                    <span class="tab-label">Quick Notes</span>
+                </button>
+                <button class="sidebar-tab" data-tab="history">
+                    <i data-lucide="archive"></i>
+                    <span class="tab-label">History Archive</span>
+                </button>
+                
+                <button id="expand-sidebar-nav-btn" class="sidebar-tab tooltip" data-tooltip="Expand Sidebar Column" style="margin-top: 12px; background: rgba(143, 67, 255, 0.08); border: 1px dashed rgba(143, 67, 255, 0.25); color: var(--accent-primary);">
+                    <i data-lucide="chevrons-right"></i>
+                    <span class="tab-label">Expand Column</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button id="sidebar-sound-toggle" class="icon-btn tooltip" data-tooltip="Mute Sound">
+                    <i data-lucide="volume-2"></i>
+                </button>
+                <button id="sidebar-theme-toggle" class="icon-btn tooltip" data-tooltip="Toggle Light Theme">
+                    <i data-lucide="moon"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN VIEW CONTAINER -->
+        <div class="app-container">
+            
+            <!-- PANEL: WEEKLY BOARD -->
+            <div class="tab-panel active" id="panel-weekly-board">
+                <!-- HEADER -->
+                <header class="app-header">
+                    <div class="header-left">
+                        <div class="logo-area">
+                            <div class="logo-icon">
+                                <i data-lucide="calendar-days"></i>
+                            </div>
+                            <div>
+                                <h1>Weekly Board</h1>
+                                <p class="tagline">Plan and reschedule tasks</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dashboard Analytics Quick Metrics -->
+                    <div class="header-center">
+                        <div class="weekly-progress-container">
+                            <div class="progress-info">
+                                <span class="progress-label">Weekly Completion</span>
+                                <span class="progress-percent" id="weekly-percentage">0%</span>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" id="weekly-progress-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="header-right">
+                        <div class="utility-controls">
+                            <button id="archive-week-btn" class="primary-btn tooltip" data-tooltip="Archive current tasks & start fresh" style="background: rgba(143, 67, 255, 0.12); border: 1px solid rgba(143, 67, 255, 0.25); color: var(--accent-primary); box-shadow: none;">
+                                <i data-lucide="archive"></i> Archive Week
+                            </button>
+                            <button id="clear-all-btn" class="danger-btn text-btn">
+                                <i data-lucide="trash-2"></i> Clear Week
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- FILTERS & CONTROLS -->
+                <section class="controls-section">
+                    <div class="search-box">
+                        <i data-lucide="search" class="search-icon"></i>
+                        <input type="text" id="search-input" placeholder="Search tasks...">
+                    </div>
+                    
+                    <div class="filters-group">
+                        <div class="filter-wrapper">
+                            <i data-lucide="filter" class="filter-icon"></i>
+                            <select id="priority-filter">
+                                <option value="all">All Priorities</option>
+                                <option value="high">High Priority Only</option>
+                                <option value="medium">Medium Priority Only</option>
+                                <option value="low">Low Priority Only</option>
+                            </select>
+                        </div>
+
+                        <div class="filter-wrapper">
+                            <i data-lucide="check-square" class="filter-icon"></i>
+                            <select id="status-filter">
+                                <option value="all">All Statuses</option>
+                                <option value="active">Active Tasks</option>
+                                <option value="completed">Completed Tasks</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="quick-stats-chips">
+                        <div class="stat-chip">
+                            <span class="chip-dot dot-total"></span>
+                            <span id="stat-total-tasks">0</span> Tasks
+                        </div>
+                        <div class="stat-chip">
+                            <span class="chip-dot dot-completed"></span>
+                            <span id="stat-done-tasks">0</span> Done
+                        </div>
+                        <div class="stat-chip">
+                            <span class="chip-dot dot-streak"></span>
+                            Streak: <span id="stat-streak">0</span> days
+                        </div>
+                    </div>
+
+                    <button id="add-weekly-task-btn" class="primary-btn tooltip" data-tooltip="Create a task that copies to all days" style="margin-left: auto;">
+                        <i data-lucide="calendar-range"></i> Add Weekly Task
+                    </button>
+                </section>
+
+                <!-- TODAY'S FOCUS OBJECTIVES -->
+                <section class="glass-card today-focus-section" id="today-focus-section">
+                    <div class="today-focus-header">
+                        <div class="header-icon-title">
+                            <i data-lucide="sparkles" class="today-focus-icon"></i>
+                            <h2>Today's Focus Objectives</h2>
+                        </div>
+                        <span class="day-badge highlight-badge" id="today-progress-badge">0/0 Complete</span>
+                    </div>
+                    
+                    <div id="today-focus-list">
+                        <!-- Dynamic focus cards injected here -->
+                    </div>
+                </section>
+
+                <!-- WEEKLY BOARD (7 DAYS) -->
+                <main class="board-grid">
+                    <!-- Monday -->
+                    <div class="day-column" data-day="monday">
+                        <div class="day-header">
+                            <div class="day-title-info">
+                                <h3>Monday</h3>
+                                <span class="day-date-label" data-day-offset="0">Mon</span>
+                            </div>
+                            <div class="day-badge" id="badge-monday">0/0</div>
+                        </div>
+                        <div class="task-list" data-day="monday" id="list-monday">
+                            <!-- Tasks injected here -->
+                        </div>
+                        <button class="add-task-btn" data-day="monday">
+                            <i data-lucide="plus"></i> Add Task
+                        </button>
+                        <button class="skip-day-btn" data-day="monday" onclick="toggleSkipDay('monday', event)">
+                            <i data-lucide="coffee"></i> <span>Skip Day</span>
+                        </button>
+                    </div>
+
+                    <!-- Tuesday -->
+                    <div class="day-column" data-day="tuesday">
+                        <div class="day-header">
+                            <div class="day-title-info">
+                                <h3>Tuesday</h3>
+                                <span class="day-date-label" data-day-offset="1">Tue</span>
+                            </div>
+                            <div class="day-badge" id="badge-tuesday">0/0</div>
+                        </div>
+                        <div class="task-list" data-day="tuesday" id="list-tuesday">
+                            <!-- Tasks injected here -->
+                        </div>
+                        <button class="add-task-btn" data-day="tuesday">
+                            <i data-lucide="plus"></i> Add Task
+                        </button>
+                        <button class="skip-day-btn" data-day="tuesday" onclick="toggleSkipDay('tuesday', event)">
+                            <i data-lucide="coffee"></i> <span>Skip Day</span>
+                        </button>
+                    </div>
+
+                    <!-- Wednesday -->
+                    <div class="day-column" data-day="wednesday">
+                        <div class="day-header">
+                            <div class="day-title-info">
+                                <h3>Wednesday</h3>
+                                <span class="day-date-label" data-day-offset="2">Wed</span>
+                            </div>
+                            <div class="day-badge" id="badge-wednesday">0/0</div>
+                        </div>
+                        <div class="task-list" data-day="wednesday" id="list-wednesday">
+                            <!-- Tasks injected here -->
+                        </div>
+                        <button class="add-task-btn" data-day="wednesday">
+                            <i data-lucide="plus"></i> Add Task
+                        </button>
+                        <button class="skip-day-btn" data-day="wednesday" onclick="toggleSkipDay('wednesday', event)">
+                            <i data-lucide="coffee"></i> <span>Skip Day</span>
+                        </button>
+                    </div>
+
+                    <!-- Thursday -->
+                    <div class="day-column" data-day="thursday">
+                        <div class="day-header">
+                            <div class="day-title-info">
+                                <h3>Thursday</h3>
+                                <span class="day-date-label" data-day-offset="3">Thu</span>
+                            </div>
+                            <div class="day-badge" id="badge-thursday">0/0</div>
+                        </div>
+                        <div class="task-list" data-day="thursday" id="list-thursday">
+                            <!-- Tasks injected here -->
+                        </div>
+                        <button class="add-task-btn" data-day="thursday">
+                            <i data-lucide="plus"></i> Add Task
+                        </button>
+                        <button class="skip-day-btn" data-day="thursday" onclick="toggleSkipDay('thursday', event)">
+                            <i data-lucide="coffee"></i> <span>Skip Day</span>
+                        </button>
+                    </div>
+
+                    <!-- Friday -->
+                    <div class="day-column" data-day="friday">
+                        <div class="day-header">
+                            <div class="day-title-info">
+                                <h3>Friday</h3>
+                                <span class="day-date-label" data-day-offset="4">Fri</span>
+                            </div>
+                            <div class="day-badge" id="badge-friday">0/0</div>
+                        </div>
+                        <div class="task-list" data-day="friday" id="list-friday">
+                            <!-- Tasks injected here -->
+                        </div>
+                        <button class="add-task-btn" data-day="friday">
+                            <i data-lucide="plus"></i> Add Task
+                        </button>
+                        <button class="skip-day-btn" data-day="friday" onclick="toggleSkipDay('friday', event)">
+                            <i data-lucide="coffee"></i> <span>Skip Day</span>
+                        </button>
+                    </div>
+
+                    <!-- Saturday -->
+                    <div class="day-column" data-day="saturday">
+                        <div class="day-header">
+                            <div class="day-title-info">
+                                <h3>Saturday</h3>
+                                <span class="day-date-label" data-day-offset="5">Sat</span>
+                            </div>
+                            <div class="day-badge" id="badge-saturday">0/0</div>
+                        </div>
+                        <div class="task-list" data-day="saturday" id="list-saturday">
+                            <!-- Tasks injected here -->
+                        </div>
+                        <button class="add-task-btn" data-day="saturday">
+                            <i data-lucide="plus"></i> Add Task
+                        </button>
+                        <button class="skip-day-btn" data-day="saturday" onclick="toggleSkipDay('saturday', event)">
+                            <i data-lucide="coffee"></i> <span>Skip Day</span>
+                        </button>
+                    </div>
+
+                    <!-- Sunday -->
+                    <div class="day-column" data-day="sunday">
+                        <div class="day-header">
+                            <div class="day-title-info">
+                                <h3>Sunday</h3>
+                                <span class="day-date-label" data-day-offset="6">Sun</span>
+                            </div>
+                            <div class="day-badge" id="badge-sunday">0/0</div>
+                        </div>
+                        <div class="task-list" data-day="sunday" id="list-sunday">
+                            <!-- Tasks injected here -->
+                        </div>
+                        <button class="add-task-btn" data-day="sunday">
+                            <i data-lucide="plus"></i> Add Task
+                        </button>
+                        <button class="skip-day-btn" data-day="sunday" onclick="toggleSkipDay('sunday', event)">
+                            <i data-lucide="coffee"></i> <span>Skip Day</span>
+                        </button>
+                    </div>
+                </main>
+
+                <!-- ANALYTICS DASHBOARD CARD -->
+                <section class="analytics-section glass-card">
+                    <div class="analytics-header">
+                        <div class="header-icon-title">
+                            <i data-lucide="bar-chart-2" class="analytics-icon"></i>
+                            <h2>Chronos Weekly Analytics</h2>
+                        </div>
+                        <p class="analytics-meta">Insightful breakdown of your focus performance</p>
+                    </div>
+                    
+                    <div class="analytics-grid">
+                        <div class="analytics-widget">
+                            <span class="widget-label">Completed Task Rate</span>
+                            <span class="widget-value" id="stats-complete-rate">0%</span>
+                            <div class="widget-progress">
+                                <div class="widget-progress-fill" id="stats-complete-bar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="analytics-widget">
+                            <span class="widget-label">Most Productive Day</span>
+                            <span class="widget-value text-accent" id="stats-best-day">—</span>
+                            <span class="widget-sub">Highest tasks resolved</span>
+                        </div>
+
+                        <div class="analytics-widget">
+                            <span class="widget-label">Focus Score</span>
+                            <span class="widget-value" id="stats-focus-score">0</span>
+                            <span class="widget-sub">Points (10pt per Done task)</span>
+                        </div>
+
+                        <div class="analytics-widget">
+                            <span class="widget-label">Priority Distribution</span>
+                            <div class="priority-dist-bar">
+                                <div class="dist-seg dist-high tooltip" data-tooltip="High Priority" style="width: 0%" id="dist-high"></div>
+                                <div class="dist-seg dist-med tooltip" data-tooltip="Medium Priority" style="width: 0%" id="dist-med"></div>
+                                <div class="dist-seg dist-low tooltip" data-tooltip="Low Priority" style="width: 0%" id="dist-low"></div>
+                            </div>
+                            <div class="priority-dist-legend">
+                                <span><span class="legend-dot bg-high"></span>High (<span id="count-high">0</span>)</span>
+                                <span><span class="legend-dot bg-med"></span>Med (<span id="count-med">0</span>)</span>
+                                <span><span class="legend-dot bg-low"></span>Low (<span id="count-low">0</span>)</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- PANEL: HABIT TRACKER -->
+            <div class="tab-panel" id="panel-habits" style="display: none;">
+                <header class="app-header">
+                    <div class="header-left">
+                        <div class="logo-area">
+                            <div class="logo-icon" style="background: linear-gradient(135deg, #ff007f 0%, #ff9f43 100%);">
+                                <i data-lucide="heart"></i>
+                            </div>
+                            <div>
+                                <h1>Weekly Habits</h1>
+                                <p class="tagline">Maintain your daily momentum</p>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="glass-card" style="padding: 24px 30px; display: flex; flex-direction: column; gap: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2>Track Daily Habits</h2>
+                        <button id="add-habit-btn" class="primary-btn" style="background: linear-gradient(135deg, #ff007f 0%, #ff9f43 100%); box-shadow: 0 8px 20px rgba(255, 0, 127, 0.25);">
+                            <i data-lucide="plus"></i> Add Habit
+                        </button>
+                    </div>
+
+                    <div style="overflow-x: auto; margin-top: 10px;">
+                        <table class="habit-table" style="width: 100%; border-collapse: collapse; min-width: 600px;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border-color); text-align: left; height: 50px;">
+                                    <th style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; width: 250px;">Habit</th>
+                                    <th style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: center; width: 80px;">Mon</th>
+                                    <th style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: center; width: 80px;">Tue</th>
+                                    <th style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: center; width: 80px;">Wed</th>
+                                    <th style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: center; width: 80px;">Thu</th>
+                                    <th style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: center; width: 80px;">Fri</th>
+                                    <th style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: center; width: 80px;">Sat</th>
+                                    <th style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: center; width: 80px;">Sun</th>
+                                    <th style="color: var(--text-muted); font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: center; width: 80px;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="habit-rows-container">
+                                <!-- Injected dynamically in JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL: QUICK NOTES -->
+            <div class="tab-panel" id="panel-notes" style="display: none;">
+                <header class="app-header">
+                    <div class="header-left">
+                        <div class="logo-area">
+                            <div class="logo-icon" style="background: linear-gradient(135deg, #00f2fe 0%, #8f43ff 100%);">
+                                <i data-lucide="file-text"></i>
+                            </div>
+                            <div>
+                                <h1>Quick Notes</h1>
+                                <p class="tagline">Thoughts, bookmarks, and scratchpad</p>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="glass-card" style="padding: 24px 30px; display: flex; flex-direction: column; gap: 20px; flex: 1; min-height: 480px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2>Scratchpad Notepad</h2>
+                        <span id="notes-save-status" style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                            <i data-lucide="check" style="width: 14px; height: 14px; color: var(--accent-secondary);"></i> Auto-saved
+                        </span>
+                    </div>
+
+                    <textarea id="notes-textarea" style="flex: 1; width: 100%; min-height: 380px; background: rgba(0,0,0,0.18); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; color: var(--text-primary); font-size: 14px; line-height: 1.6; resize: none; border-color: rgba(255,255,255,0.06);" placeholder="Type any notes here. They will automatically save and persist between reloads..."></textarea>
+                </div>
+            </div>
+
+            <!-- PANEL: HISTORY ARCHIVE -->
+            <div class="tab-panel" id="panel-history" style="display: none;">
+                <header class="app-header">
+                    <div class="header-left">
+                        <div class="logo-area">
+                            <div class="logo-icon" style="background: linear-gradient(135deg, #00d2fc 0%, #00f2fe 100%);">
+                                <i data-lucide="archive"></i>
+                            </div>
+                            <div>
+                                <h1>History Archive</h1>
+                                <p class="tagline">Review and manage past weeks</p>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="glass-card" style="padding: 24px 30px; display: flex; flex-direction: column; gap: 20px; flex: 1; min-height: 480px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <h2>Archived Weeks</h2>
+                        <span id="history-count-badge" class="day-badge">0 Weeks Saved</span>
+                    </div>
+
+                    <div id="history-list-container" style="display: flex; flex-direction: column; gap: 16px; margin-top: 10px;">
+                        <!-- Dynamic weeks injected here -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- MODAL FOR TASK ADD / EDIT -->
+    <div id="task-modal" class="modal-overlay">
+        <div class="modal-card glass-card animate-zoom">
+            <div class="modal-header">
+                <h2 id="modal-title">Add New Task</h2>
+                <button id="modal-close-btn" class="icon-btn">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            
+            <form id="task-form">
+                <input type="hidden" id="task-id">
+                <input type="hidden" id="task-day">
+
+                <div class="form-group">
+                    <label for="task-title-input">Task Title *</label>
+                    <input type="text" id="task-title-input" placeholder="e.g. Finalize quarterly report" required maxlength="100">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label for="task-priority-input">Priority</label>
+                        <select id="task-priority-input">
+                            <option value="low">Low Priority</option>
+                            <option value="medium" selected>Medium Priority</option>
+                            <option value="high">High Priority</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group flex-1" id="modal-day-select-container">
+                        <label for="task-day-select">Target Day</label>
+                        <select id="task-day-select">
+                            <option value="monday">Monday</option>
+                            <option value="tuesday">Tuesday</option>
+                            <option value="wednesday">Wednesday</option>
+                            <option value="thursday">Thursday</option>
+                            <option value="friday">Friday</option>
+                            <option value="saturday">Saturday</option>
+                            <option value="sunday">Sunday</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="task-description-input">Notes / Details (Optional)</label>
+                    <textarea id="task-description-input" rows="3" placeholder="Add descriptions, sub-items, or links..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="task-reward-input">Reward (Optional)</label>
+                    <input type="text" id="task-reward-input" placeholder="e.g. 15-min gaming break, slice of cake..." maxlength="100">
+                </div>
+
+                <div class="form-group">
+                    <label for="task-link-input">Link URL (Optional)</label>
+                    <input type="url" id="task-link-input" placeholder="e.g. https://example.com/project">
+                </div>
+
+                <div class="form-group" id="modal-all-days-container">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; font-weight: 600; color: var(--text-secondary); margin-top: 4px;">
+                        <input type="checkbox" id="task-all-days-input" style="width: auto; height: auto; cursor: pointer; accent-color: var(--accent-primary);">
+                        <span>Add to every day of the week</span>
+                    </label>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" id="modal-cancel-btn" class="text-btn">Cancel</button>
+                    <button type="submit" id="modal-submit-btn" class="primary-btn">
+                        <i data-lucide="check"></i> <span id="submit-text">Add Task</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL FOR REWARD UNLOCKED -->
+    <div id="reward-modal" class="modal-overlay" style="z-index: 1100;">
+        <div class="modal-card glass-card animate-zoom" style="max-width: 420px; text-align: center; padding: 40px 30px;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #ff007f 0%, #ff9f43 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px auto; box-shadow: 0 10px 25px rgba(255, 0, 127, 0.4);">
+                <i data-lucide="gift" style="width: 40px; height: 40px; color: #fff; stroke-width: 2.2px;"></i>
+            </div>
+            
+            <h2 style="font-size: 24px; font-family: 'Outfit', sans-serif; background: linear-gradient(to right, #ff007f, #ff9f43); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 8px;">Reward Unlocked!</h2>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 24px;" id="reward-modal-task-title">For completing: Task Name</p>
+            
+            <div style="background: rgba(255, 0, 127, 0.08); border: 1px solid rgba(255, 0, 127, 0.2); border-radius: var(--radius-md); padding: 16px 20px; margin-bottom: 30px;">
+                <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px;">Your Reward</span>
+                <p id="reward-modal-text" style="font-size: 16px; font-weight: 700; color: var(--text-primary); margin-top: 6px; word-break: break-word;"></p>
+            </div>
+            
+            <button id="reward-claim-btn" class="primary-btn" style="background: linear-gradient(135deg, #ff007f 0%, #ff9f43 100%); box-shadow: 0 8px 20px rgba(255, 0, 127, 0.3); width: 100%; justify-content: center; height: 46px;">
+                <i data-lucide="sparkles"></i> Claim Reward
+            </button>
+        </div>
+    </div>
+
+    <!-- Script Entrypoint -->
+    <script src="app.js"></script>
+</body>
+</html>
