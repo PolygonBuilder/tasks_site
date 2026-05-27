@@ -1,6 +1,7 @@
 /**
  * CHRONOS: WEEKLY PRODUCTIVITY PLANNER
  * Core Client-side Script
+ * TODO: 
  */
 
 // ==========================================================================
@@ -217,7 +218,7 @@ function renderDates() {
 
         // Format date string (e.g. "May 26")
         const formatted = targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        
+
         const column = document.querySelector(`.day-column[data-day="${day}"]`);
         const label = column.querySelector('.day-date-label');
         if (label) label.textContent = formatted;
@@ -235,18 +236,18 @@ function getWeekRangeString() {
     const today = new Date();
     const currentDayNum = today.getDay();
     const dayIndex = currentDayNum === 0 ? 6 : currentDayNum - 1;
-    
+
     const monday = new Date(today);
     monday.setDate(today.getDate() - dayIndex);
-    
+
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
-    
+
     const formatOption = { month: 'short', day: 'numeric' };
     const monStr = monday.toLocaleDateString('en-US', formatOption);
     const sunStr = sunday.toLocaleDateString('en-US', formatOption);
     const yearStr = sunday.getFullYear();
-    
+
     return `${monStr} – ${sunStr}, ${yearStr}`;
 }
 
@@ -260,7 +261,7 @@ function createExplosion(x, y) {
     for (let i = 0; i < particleCount; i++) {
         const particle = document.createElement('div');
         particle.className = 'confetti-particle';
-        
+
         const color = colors[Math.floor(Math.random() * colors.length)];
         particle.style.backgroundColor = color;
         particle.style.left = `${x}px`;
@@ -307,7 +308,7 @@ function renderBoard() {
             } else {
                 column.classList.remove('skipped');
             }
-            
+
             const skipBtn = column.querySelector('.skip-day-btn');
             if (skipBtn) {
                 if (skippedDays[day]) {
@@ -469,7 +470,7 @@ function renderTodayFocus() {
 
     // Filter tasks scheduled for today
     const todayTasks = tasks.filter(t => t.day === todayDayName);
-    
+
     // Apply standard search and status filters to maintain real-time sync with user controls
     const filteredTodayTasks = todayTasks.filter(task => {
         // Search Filter
@@ -571,7 +572,7 @@ function renderTodayFocus() {
 
 // Safe escape HTML function
 function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, 
+    return str.replace(/[&<>'"]/g,
         tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
     );
 }
@@ -591,7 +592,7 @@ function handleDragStart(e) {
 function handleDragEnd() {
     this.classList.remove('dragging');
     draggedTaskId = null;
-    
+
     // Clean up any remaining drop indicators
     document.querySelectorAll('.task-list').forEach(list => {
         list.classList.remove('drag-over');
@@ -602,17 +603,17 @@ function setupDragAndDrop() {
     const columns = document.querySelectorAll('.task-list');
 
     columns.forEach(column => {
-        column.addEventListener('dragover', function(e) {
+        column.addEventListener('dragover', function (e) {
             e.preventDefault();
             e.dataTransfer.dropEffect = 'move';
             this.classList.add('drag-over');
         });
 
-        column.addEventListener('dragleave', function() {
+        column.addEventListener('dragleave', function () {
             this.classList.remove('drag-over');
         });
 
-        column.addEventListener('drop', function(e) {
+        column.addEventListener('drop', function (e) {
             e.preventDefault();
             this.classList.remove('drag-over');
 
@@ -637,21 +638,21 @@ function setupDragAndDrop() {
 // TASK OPERATIONS (CRUD)
 // ==========================================================================
 
-window.toggleSkipDay = function(day, event) {
+window.toggleSkipDay = function (day, event) {
     if (event) event.stopPropagation();
     skippedDays[day] = !skippedDays[day];
     saveSkippedDaysToStorage();
     playSound('click');
-    
+
     // Play particle fireworks if unskipping (so it feels great to resume)
     if (!skippedDays[day] && event && event.clientX && event.clientY) {
         createExplosion(event.clientX, event.clientY);
     }
-    
+
     renderBoard();
 };
 
-window.toggleTaskCompletion = function(id, event) {
+window.toggleTaskCompletion = function (id, event) {
     event.stopPropagation();
     const taskIndex = tasks.findIndex(t => t.id === id);
     if (taskIndex !== -1) {
@@ -672,13 +673,13 @@ window.toggleTaskCompletion = function(id, event) {
                     const rewardModal = document.getElementById('reward-modal');
                     const rewardModalTaskTitle = document.getElementById('reward-modal-task-title');
                     const rewardModalText = document.getElementById('reward-modal-text');
-                    
+
                     if (rewardModal && rewardModalTaskTitle && rewardModalText) {
                         rewardModalTaskTitle.textContent = `For completing: "${task.title}"`;
                         rewardModalText.textContent = task.reward;
                         rewardModal.classList.add('active');
                         playSound('success');
-                        
+
                         // Burst particles right over the unlocked reward popup
                         const rect = rewardModal.getBoundingClientRect();
                         createExplosion(rect.left + rect.width / 2, rect.top + rect.height / 2);
@@ -693,9 +694,32 @@ window.toggleTaskCompletion = function(id, event) {
     }
 };
 
-window.deleteTask = function(id, event) {
+window.deleteTask = function (id, event) {
     event.stopPropagation();
-    tasks = tasks.filter(t => t.id !== id);
+    const taskToDelete = tasks.find(t => t.id === id);
+    if (taskToDelete) {
+        const hasGroup = taskToDelete.groupId && tasks.some(t => t.groupId === taskToDelete.groupId && t.id !== id);
+        const hasSameTitle = tasks.some(t => t.title.toLowerCase() === taskToDelete.title.toLowerCase() && t.id !== id);
+
+        if (hasGroup || hasSameTitle) {
+            const deleteConfirm = confirm(`Would you like to delete "${taskToDelete.title}" from ALL days?\n\nClick "OK" to delete from all days.\nClick "Cancel" to delete only for today.`);
+            if (deleteConfirm) {
+                const titleLower = taskToDelete.title.toLowerCase();
+                const groupId = taskToDelete.groupId;
+                tasks = tasks.filter(t => {
+                    if (groupId && t.groupId === groupId) return false;
+                    if (t.title.toLowerCase() === titleLower) return false;
+                    return true;
+                });
+            } else {
+                tasks = tasks.filter(t => t.id !== id);
+            }
+        } else {
+            tasks = tasks.filter(t => t.id !== id);
+        }
+    } else {
+        tasks = tasks.filter(t => t.id !== id);
+    }
     saveToStorage();
     playSound('delete');
     renderBoard();
@@ -717,6 +741,8 @@ const taskLinkInput = document.getElementById('task-link-input');
 const modalSubmitBtnText = document.getElementById('submit-text');
 const taskAllDaysInput = document.getElementById('task-all-days-input');
 const modalAllDaysContainer = document.getElementById('modal-all-days-container');
+const taskEditAllDaysInput = document.getElementById('task-edit-all-days-input');
+const modalEditAllDaysContainer = document.getElementById('modal-edit-all-days-container');
 
 // Open modal in creation mode for a specific day
 function openAddModal(day, isWeekly = false) {
@@ -727,14 +753,17 @@ function openAddModal(day, isWeekly = false) {
         modalTitle.textContent = `Add Task to ${day.charAt(0).toUpperCase() + day.slice(1)}`;
     }
     modalForm.reset();
-    
+
     taskIdInput.value = '';
     taskDayInput.value = day;
     taskDaySelect.value = day;
     taskDaySelectContainer.style.display = 'none'; // Hide day select since column button implies day
-    
+
     if (modalAllDaysContainer) {
         modalAllDaysContainer.style.display = 'block'; // Show checkbox for adding to all days
+    }
+    if (modalEditAllDaysContainer) {
+        modalEditAllDaysContainer.style.display = 'none'; // Hide checkbox for editing all days
     }
     if (taskAllDaysInput) {
         taskAllDaysInput.checked = isWeekly; // Auto-check checkbox if button is clicked
@@ -752,7 +781,7 @@ function openAddModal(day, isWeekly = false) {
 }
 
 // Open modal in edit mode
-window.openEditModal = function(id, event) {
+window.openEditModal = function (id, event) {
     event.stopPropagation();
     playSound('click');
     const task = tasks.find(t => t.id === id);
@@ -764,16 +793,29 @@ window.openEditModal = function(id, event) {
         taskDayInput.value = task.day;
         taskDaySelect.value = task.day;
         taskDaySelectContainer.style.display = 'flex'; // Allow changing day during editing
-        
+
         if (modalAllDaysContainer) {
             modalAllDaysContainer.style.display = 'none'; // Hide checkbox during editing
         }
+
+        if (modalEditAllDaysContainer) {
+            modalEditAllDaysContainer.style.display = 'block'; // Show checkbox for editing all days
+            
+            // Check if there are other tasks in the same group or with the same title on other days
+            const hasGroup = task.groupId && tasks.some(t => t.groupId === task.groupId && t.id !== id);
+            const hasSameTitle = tasks.some(t => t.title.toLowerCase() === task.title.toLowerCase() && t.id !== id);
+            
+            if (taskEditAllDaysInput) {
+                taskEditAllDaysInput.checked = !!(hasGroup || hasSameTitle);
+            }
+        }
+
         modalSubmitBtnText.textContent = 'Save Changes';
 
         taskTitleInput.value = task.title;
         taskPriorityInput.value = task.priority;
         taskDescriptionInput.value = task.notes;
-        
+
         if (taskRewardInput) {
             taskRewardInput.value = task.reward || ''; // Populate reward details
         }
@@ -791,7 +833,7 @@ function closeModal() {
 }
 
 // Save or Update Form Submission
-modalForm.addEventListener('submit', function(e) {
+modalForm.addEventListener('submit', function (e) {
     e.preventDefault();
 
     const id = taskIdInput.value;
@@ -800,7 +842,7 @@ modalForm.addEventListener('submit', function(e) {
     const notes = taskDescriptionInput.value.trim();
     const reward = taskRewardInput ? taskRewardInput.value.trim() : '';
     const link = taskLinkInput ? taskLinkInput.value.trim() : '';
-    
+
     // Determine target day depending on editing vs creation
     const day = id ? taskDaySelect.value : taskDayInput.value;
 
@@ -810,22 +852,75 @@ modalForm.addEventListener('submit', function(e) {
         // Edit Mode
         const taskIndex = tasks.findIndex(t => t.id === id);
         if (taskIndex !== -1) {
-            tasks[taskIndex].title = title;
-            tasks[taskIndex].priority = priority;
-            tasks[taskIndex].notes = notes;
-            tasks[taskIndex].reward = reward;
-            tasks[taskIndex].link = link;
-            tasks[taskIndex].day = day;
+            const originalTask = tasks[taskIndex];
+            const editAllDaysChecked = taskEditAllDaysInput && taskEditAllDaysInput.checked;
+
+            if (editAllDaysChecked) {
+                // Determine or generate a group ID
+                let groupId = originalTask.groupId;
+                if (!groupId) {
+                    groupId = 'group_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
+                    originalTask.groupId = groupId;
+                }
+
+                // Find all existing linked tasks or tasks with the same original title to sync
+                const matchingTasks = tasks.filter(t => 
+                    (t.groupId && t.groupId === groupId) || 
+                    (t.title.toLowerCase() === originalTask.title.toLowerCase())
+                );
+
+                // Update existing instances (maintaining their days)
+                matchingTasks.forEach(t => {
+                    t.groupId = groupId;
+                    t.title = title;
+                    t.priority = priority;
+                    t.notes = notes;
+                    t.reward = reward;
+                    t.link = link;
+                });
+
+                // Ensure it exists on all 7 days since they checked "apply to all days"
+                const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+                const existingDays = matchingTasks.map(t => t.day);
+                
+                daysOfWeek.forEach(d => {
+                    if (!existingDays.includes(d)) {
+                        const newTask = {
+                            id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+                            groupId: groupId,
+                            title,
+                            day: d,
+                            priority,
+                            completed: false,
+                            notes,
+                            reward,
+                            link
+                        };
+                        tasks.push(newTask);
+                    }
+                });
+            } else {
+                // Unique daily task: sever the link with any group and edit it in isolation
+                originalTask.groupId = undefined;
+                originalTask.title = title;
+                originalTask.priority = priority;
+                originalTask.notes = notes;
+                originalTask.reward = reward;
+                originalTask.link = link;
+                originalTask.day = day;
+            }
         }
     } else {
         // Create Mode
         const allDaysChecked = taskAllDaysInput && taskAllDaysInput.checked;
         if (allDaysChecked) {
             // Add to every day of the week
+            const groupId = 'group_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
             const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
             daysOfWeek.forEach(d => {
                 const newTask = {
                     id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+                    groupId: groupId,
                     title,
                     day: d,
                     priority,
@@ -916,7 +1011,7 @@ function renderHabits() {
     lucide.createIcons();
 }
 
-window.toggleHabit = function(habitId, day, event) {
+window.toggleHabit = function (habitId, day, event) {
     event.stopPropagation();
     const habitIndex = habits.findIndex(h => h.id === habitId);
     if (habitIndex !== -1) {
@@ -937,7 +1032,7 @@ window.toggleHabit = function(habitId, day, event) {
     }
 };
 
-window.deleteHabit = function(habitId, event) {
+window.deleteHabit = function (habitId, event) {
     event.stopPropagation();
     habits = habits.filter(h => h.id !== habitId);
     saveHabitsToStorage();
@@ -1042,7 +1137,7 @@ function renderHistoryTasks(taskList) {
     `).join('');
 }
 
-window.toggleWeekExpand = function(itemId, event) {
+window.toggleWeekExpand = function (itemId, event) {
     event.stopPropagation();
     const itemIndex = history.findIndex(h => h.id === itemId);
     if (itemIndex !== -1) {
@@ -1053,7 +1148,7 @@ window.toggleWeekExpand = function(itemId, event) {
     }
 };
 
-window.deleteHistoryWeek = function(itemId, event) {
+window.deleteHistoryWeek = function (itemId, event) {
     event.stopPropagation();
     history = history.filter(h => h.id !== itemId);
     saveHistoryToStorage();
@@ -1162,7 +1257,7 @@ function setupUIHandlers() {
     // Search input keyup
     const searchInput = document.getElementById('search-input');
     if (searchInput) {
-        searchInput.addEventListener('input', function() {
+        searchInput.addEventListener('input', function () {
             searchFilter = this.value.toLowerCase().trim();
             renderBoard();
         });
@@ -1171,7 +1266,7 @@ function setupUIHandlers() {
     // Priority filter change
     const pFilter = document.getElementById('priority-filter');
     if (pFilter) {
-        pFilter.addEventListener('change', function() {
+        pFilter.addEventListener('change', function () {
             priorityFilter = this.value;
             renderBoard();
         });
@@ -1180,7 +1275,7 @@ function setupUIHandlers() {
     // Status filter change
     const sFilter = document.getElementById('status-filter');
     if (sFilter) {
-        sFilter.addEventListener('change', function() {
+        sFilter.addEventListener('change', function () {
             statusFilter = this.value;
             renderBoard();
         });
@@ -1188,7 +1283,7 @@ function setupUIHandlers() {
 
     // Add task button click (column add triggers)
     document.querySelectorAll('.add-task-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
+        btn.addEventListener('click', function () {
             const day = this.getAttribute('data-day');
             openAddModal(day);
         });
@@ -1197,7 +1292,7 @@ function setupUIHandlers() {
     // Add task to all days button click
     const addWeeklyBtn = document.getElementById('add-weekly-task-btn');
     if (addWeeklyBtn) {
-        addWeeklyBtn.addEventListener('click', function() {
+        addWeeklyBtn.addEventListener('click', function () {
             openAddModal('monday', true);
         });
     }
@@ -1211,7 +1306,7 @@ function setupUIHandlers() {
 
     // Click outside modal card to close
     if (modal) {
-        modal.addEventListener('click', function(e) {
+        modal.addEventListener('click', function (e) {
             if (e.target === modal) closeModal();
         });
     }
@@ -1220,7 +1315,7 @@ function setupUIHandlers() {
     const sidebar = document.getElementById('app-sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle-btn');
     if (sidebarToggle && sidebar) {
-        sidebarToggle.addEventListener('click', function() {
+        sidebarToggle.addEventListener('click', function () {
             sidebar.classList.toggle('collapsed');
             playSound('click');
 
@@ -1239,7 +1334,7 @@ function setupUIHandlers() {
     // Expand sidebar button inside sidebar nav under History Archive tab
     const expandSidebarBtn = document.getElementById('expand-sidebar-nav-btn');
     if (expandSidebarBtn && sidebar) {
-        expandSidebarBtn.addEventListener('click', function() {
+        expandSidebarBtn.addEventListener('click', function () {
             sidebar.classList.remove('collapsed');
             playSound('click');
 
@@ -1259,7 +1354,7 @@ function setupUIHandlers() {
     const tabs = document.querySelectorAll('.sidebar-tab:not(#expand-sidebar-nav-btn)');
     const panels = document.querySelectorAll('.tab-panel');
     tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
+        tab.addEventListener('click', function () {
             const target = this.getAttribute('data-tab');
 
             tabs.forEach(t => t.classList.remove('active'));
@@ -1283,10 +1378,10 @@ function setupUIHandlers() {
     // Sidebar Sound toggle
     const soundToggle = document.getElementById('sidebar-sound-toggle');
     if (soundToggle) {
-        soundToggle.addEventListener('click', function() {
+        soundToggle.addEventListener('click', function () {
             settings.soundEnabled = !settings.soundEnabled;
             saveSettingsToStorage();
-            
+
             const icon = this.querySelector('i');
             if (settings.soundEnabled) {
                 icon.setAttribute('data-lucide', 'volume-2');
@@ -1303,7 +1398,7 @@ function setupUIHandlers() {
     // Sidebar Theme toggle
     const themeToggle = document.getElementById('sidebar-theme-toggle');
     if (themeToggle) {
-        themeToggle.addEventListener('click', function() {
+        themeToggle.addEventListener('click', function () {
             settings.theme = settings.theme === 'dark' ? 'light' : 'dark';
             saveSettingsToStorage();
             applyTheme();
@@ -1314,7 +1409,7 @@ function setupUIHandlers() {
     // Clear entire week
     const clearBtn = document.getElementById('clear-all-btn');
     if (clearBtn) {
-        clearBtn.addEventListener('click', function() {
+        clearBtn.addEventListener('click', function () {
             tasks = [];
             saveToStorage();
             playSound('delete');
@@ -1325,7 +1420,7 @@ function setupUIHandlers() {
     // Archive current week button click
     const archiveWeekBtn = document.getElementById('archive-week-btn');
     if (archiveWeekBtn) {
-        archiveWeekBtn.addEventListener('click', function(e) {
+        archiveWeekBtn.addEventListener('click', function (e) {
             if (tasks.length === 0) {
                 alert('Add and plan tasks before archiving your week!');
                 return;
@@ -1363,7 +1458,7 @@ function setupUIHandlers() {
     // Add Habit Button Handler
     const addHabitBtn = document.getElementById('add-habit-btn');
     if (addHabitBtn) {
-        addHabitBtn.addEventListener('click', function() {
+        addHabitBtn.addEventListener('click', function () {
             const name = prompt('Enter habit name (e.g. Meditate for 10 minutes):');
             if (name && name.trim()) {
                 const newHabit = {
@@ -1383,7 +1478,7 @@ function setupUIHandlers() {
     const notesTextarea = document.getElementById('notes-textarea');
     if (notesTextarea) {
         notesTextarea.value = notes;
-        notesTextarea.addEventListener('input', function() {
+        notesTextarea.addEventListener('input', function () {
             notes = this.value;
             saveNotesToStorage();
         });
@@ -1393,7 +1488,7 @@ function setupUIHandlers() {
     const rewardClaimBtn = document.getElementById('reward-claim-btn');
     const rewardModal = document.getElementById('reward-modal');
     if (rewardClaimBtn && rewardModal) {
-        rewardClaimBtn.addEventListener('click', function() {
+        rewardClaimBtn.addEventListener('click', function () {
             rewardModal.classList.remove('active');
             playSound('click');
         });
@@ -1451,11 +1546,11 @@ function checkWeeklyAutoArchive() {
             // Reset skipped days for the new week
             skippedDays = { monday: false, tuesday: false, wednesday: false, thursday: false, friday: false, saturday: false, sunday: false };
             saveSkippedDaysToStorage();
-            
+
             console.log(`Auto-archived week: ${activeWeekRange}`);
             alert(`📅 A new week has started! Chronos has automatically archived your tasks from last week ("${activeWeekRange}") to your History Archive. Starting a fresh week!`);
         }
-        
+
         // Update to the new active week
         localStorage.setItem('chronos_active_week_range', currentWeekRange);
     }
