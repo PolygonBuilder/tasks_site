@@ -10,6 +10,9 @@
 let tasks = [];
 let habits = [];
 let history = [];
+let schedule = [];
+const dayNamesList = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+let activeScheduleDay = dayNamesList[new Date().getDay()];
 let notes = '';
 let settings = {
     soundEnabled: true,
@@ -33,6 +36,7 @@ function initData() {
     const savedTasks = localStorage.getItem('chronos_tasks');
     const savedHabits = localStorage.getItem('chronos_habits');
     const savedHistory = localStorage.getItem('chronos_history');
+    const savedSchedule = localStorage.getItem('chronos_schedule');
     const savedNotes = localStorage.getItem('chronos_notes');
     const savedSettings = localStorage.getItem('chronos_settings');
     const savedSkippedDays = localStorage.getItem('chronos_skipped_days');
@@ -59,6 +63,14 @@ function initData() {
     } else {
         history = [];
         saveHistoryToStorage();
+    }
+
+    // Schedule load
+    if (savedSchedule) {
+        schedule = JSON.parse(savedSchedule);
+    } else {
+        schedule = [];
+        saveScheduleToStorage();
     }
 
     // Notes load
@@ -97,6 +109,10 @@ function saveHabitsToStorage() {
 
 function saveHistoryToStorage() {
     localStorage.setItem('chronos_history', JSON.stringify(history));
+}
+
+function saveScheduleToStorage() {
+    localStorage.setItem('chronos_schedule', JSON.stringify(schedule));
 }
 
 function saveNotesToStorage() {
@@ -437,6 +453,11 @@ function renderBoard() {
 
     // Render the Today's Focus Objectives section
     renderTodayFocus();
+
+    // Populate Weekly Board Tasks select in Daily Schedule tab
+    if (typeof populateSchedTaskSelect === 'function') {
+        populateSchedTaskSelect();
+    }
 }
 
 /**
@@ -659,6 +680,17 @@ window.toggleTaskCompletion = function (id, event) {
         tasks[taskIndex].completed = !tasks[taskIndex].completed;
         saveToStorage();
 
+        // Sync completion state to any linked schedule items
+        schedule.forEach(item => {
+            if (item.taskId === id) {
+                item.completed = tasks[taskIndex].completed;
+            }
+        });
+        saveScheduleToStorage();
+        if (typeof renderSchedule === 'function') {
+            renderSchedule();
+        }
+
         if (tasks[taskIndex].completed) {
             playSound('success');
             // Core coordinate for particle explosion
@@ -720,6 +752,15 @@ window.deleteTask = function (id, event) {
     } else {
         tasks = tasks.filter(t => t.id !== id);
     }
+
+    // Sever linkage on deletion
+    schedule.forEach(item => {
+        if (item.taskId === id) {
+            item.taskId = undefined;
+        }
+    });
+    saveScheduleToStorage();
+
     saveToStorage();
     playSound('delete');
     renderBoard();
@@ -1251,6 +1292,342 @@ function renderAnalytics() {
 
 
 // ==========================================================================
+// DAILY SCHEDULE TIMETABLE OPERATIONS
+// ==========================================================================
+
+function populateSchedTaskSelect() {
+    const taskSelect = document.getElementById('sched-task-select');
+    if (!taskSelect) return;
+
+    // Reset select options
+    taskSelect.innerHTML = '<option value="">-- Select a Task --</option>';
+
+    // Filter tasks for active day and which are not completed
+    const dayTasks = tasks.filter(t => t.day === activeScheduleDay && !t.completed);
+
+    dayTasks.forEach(task => {
+        const opt = document.createElement('option');
+        opt.value = task.id;
+        opt.textContent = `[${task.priority.toUpperCase()}] ${task.title}`;
+        taskSelect.appendChild(opt);
+    });
+}
+
+function timeToMinutes(timeStr) {
+    if (!timeStr) return 0;
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+}
+
+function formatTime12(timeStr) {
+    if (!timeStr) return '';
+    let [hours, minutes] = timeStr.split(':').map(Number);
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    const minutesStr = minutes.toString().padStart(2, '0');
+    return `${hours}:${minutesStr} ${ampm}`;
+}
+
+function renderSchedule() {
+    // 0. Populate the Weekly Board Tasks select dropdown
+    populateSchedTaskSelect();
+
+    // 1. Draw horizontal grid hour markings (from 06:00 to 24:00)
+    const markersContainer = document.getElementById('timeline-hour-markers-container');
+    if (markersContainer) {
+        markersContainer.innerHTML = '';
+        for (let hour = 6; hour <= 23; hour++) {
+            const row = document.createElement('div');
+            row.className = 'timeline-hour-row';
+            row.style.top = `${(hour - 6) * 50}px`; // 50px per hour
+            
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+            const hourStr = `${displayHour.toString().padStart(2, '0')}:00 ${ampm}`;
+            
+            row.innerHTML = `
+                <div class="timeline-hour-label">${hourStr}</div>
+                <div class="timeline-hour-line"></div>
+            `;
+            markersContainer.appendChild(row);
+        }
+    }
+
+    // 2. Set Active Day Header Titles
+    const timelineAgendaTitle = document.getElementById('timeline-agenda-title');
+    if (timelineAgendaTitle) {
+        timelineAgendaTitle.textContent = `${activeScheduleDay.charAt(0).toUpperCase() + activeScheduleDay.slice(1)}'s Schedule`;
+    }
+
+    const dayColumn = document.querySelector(`.day-column[data-day="${activeScheduleDay}"]`);
+    const dateLabelText = dayColumn ? dayColumn.querySelector('.day-date-label').textContent : '';
+    const timelineDayDateLabel = document.getElementById('timeline-day-date-label');
+    if (timelineDayDateLabel) {
+        timelineDayDateLabel.textContent = dateLabelText ? `Agenda for ${dateLabelText}` : 'Schedule View';
+    }
+
+    // 3. Filter and sort items scheduled for the active day
+    const activeItems = schedule.filter(item => item.day === activeScheduleDay);
+    activeItems.sort((a, b) => a.timeFrom.localeCompare(b.timeFrom));
+
+    // 4. Overlap Layout Algorithm (Google Calendar style)
+    const columns = [];
+    activeItems.forEach(item => {
+        const itemStart = timeToMinutes(item.timeFrom);
+        const itemEnd = timeToMinutes(item.timeTo);
+        
+        let placed = false;
+        for (let i = 0; i < columns.length; i++) {
+            const lastInCol = columns[i][columns[i].length - 1];
+            const lastStart = timeToMinutes(lastInCol.timeFrom);
+            const lastEnd = timeToMinutes(lastInCol.timeTo);
+            
+            // Check for time overlap
+            const overlap = (itemStart < lastEnd && itemEnd > lastStart);
+            if (!overlap) {
+                columns[i].push(item);
+                item.colIndex = i;
+                placed = true;
+                break;
+            }
+        }
+        if (!placed) {
+            columns.push([item]);
+            item.colIndex = columns.length - 1;
+        }
+    });
+
+    activeItems.forEach(item => {
+        item.totalCols = columns.length;
+    });
+
+    // 5. Draw events overlays inside container
+    const eventsContainer = document.getElementById('timeline-events-container');
+    if (eventsContainer) {
+        eventsContainer.innerHTML = '';
+
+        if (activeItems.length === 0) {
+            eventsContainer.innerHTML = `
+                <div class="timeline-empty-state">
+                    <i data-lucide="calendar-check"></i>
+                    <h3>Your Schedule is Clear</h3>
+                    <p>No activities scheduled for this day yet. Plan your day by scheduling an activity on the left!</p>
+                </div>
+            `;
+            lucide.createIcons();
+            return;
+        }
+
+        activeItems.forEach(item => {
+            let startMin = Math.max(360, timeToMinutes(item.timeFrom)); // 6 AM
+            let endMin = Math.min(1440, timeToMinutes(item.timeTo));   // Midnight
+            if (endMin <= startMin) endMin = startMin + 30;
+
+            const top = (startMin - 360) * (50 / 60);
+            const height = (endMin - startMin) * (50 / 60);
+            
+            const width = `calc((100% / ${item.totalCols}) - 8px)`;
+            const left = `calc((${item.colIndex} * (100% / ${item.totalCols})) + 4px)`;
+
+            const card = document.createElement('div');
+            card.className = `timeline-event-card event-card-${item.color} ${item.completed ? 'completed' : ''}`;
+            card.style.top = `${top}px`;
+            card.style.height = `${height}px`;
+            card.style.width = width;
+            card.style.left = left;
+
+            card.innerHTML = `
+                <div class="event-header">
+                    <div class="event-checkbox-title">
+                        <div class="event-checkbox tooltip" data-tooltip="${item.completed ? 'Mark Active' : 'Mark Complete'}" onclick="toggleScheduleItemCompletion('${item.id}', event)">
+                            <i data-lucide="check"></i>
+                        </div>
+                        <span class="event-title" title="${escapeHTML(item.title)}">${escapeHTML(item.title)}</span>
+                    </div>
+                    <button class="event-delete-btn tooltip" data-tooltip="Delete Activity" onclick="deleteScheduleItem('${item.id}', event)">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                </div>
+                <div class="event-time-badge">${formatTime12(item.timeFrom)} – ${formatTime12(item.timeTo)}</div>
+            `;
+            eventsContainer.appendChild(card);
+        });
+
+        lucide.createIcons();
+    }
+}
+
+function updateActiveScheduleDayTab() {
+    document.querySelectorAll('.day-tab-btn').forEach(btn => {
+        if (btn.getAttribute('data-day') === activeScheduleDay) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+function setupScheduleHandlers() {
+    // 1. Day selector buttons inside the visual timetable
+    document.querySelectorAll('.day-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            activeScheduleDay = this.getAttribute('data-day');
+            updateActiveScheduleDayTab();
+            playSound('click');
+            renderSchedule();
+        });
+    });
+
+    updateActiveScheduleDayTab();
+
+    // Link Task dropdown change event
+    const taskSelect = document.getElementById('sched-task-select');
+    if (taskSelect) {
+        taskSelect.addEventListener('change', function () {
+            const taskId = this.value;
+            if (taskId) {
+                const task = tasks.find(t => t.id === taskId);
+                if (task) {
+                    // Populate the title input field
+                    document.getElementById('sched-title-input').value = task.title;
+
+                    // Autoselect category based on priority
+                    let categoryColor = 'work';
+                    if (task.priority === 'high') categoryColor = 'health';
+                    else if (task.priority === 'medium') categoryColor = 'leisure';
+                    else if (task.priority === 'low') categoryColor = 'study';
+
+                    const radio = document.querySelector(`input[name="sched-category"][value="${categoryColor}"]`);
+                    if (radio) radio.checked = true;
+                }
+            }
+        });
+    }
+
+    // 2. Activity creation form submit
+    const schedForm = document.getElementById('schedule-form');
+    if (schedForm) {
+        schedForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const title = document.getElementById('sched-title-input').value.trim();
+            const day = document.getElementById('sched-day-select').value;
+            const timeFrom = document.getElementById('sched-time-from').value;
+            const timeTo = document.getElementById('sched-time-to').value;
+
+            const categoryEl = document.querySelector('input[name="sched-category"]:checked');
+            const color = categoryEl ? categoryEl.value : 'work';
+
+            if (!title || !timeFrom || !timeTo) return;
+
+            // Time range validation
+            const fromMin = timeToMinutes(timeFrom);
+            const toMin = timeToMinutes(timeTo);
+
+            if (toMin <= fromMin) {
+                alert('End time ("Time To") must be later than start time ("Time From").');
+                return;
+            }
+
+            const taskId = taskSelect ? taskSelect.value : '';
+
+            const newItem = {
+                id: 's_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+                title,
+                day,
+                timeFrom,
+                timeTo,
+                color,
+                completed: false,
+                taskId: taskId || undefined
+            };
+
+            schedule.push(newItem);
+            saveScheduleToStorage();
+            playSound('click');
+
+            // Reset only relevant input fields
+            document.getElementById('sched-title-input').value = '';
+            document.getElementById('sched-time-from').value = '';
+            document.getElementById('sched-time-to').value = '';
+            if (taskSelect) taskSelect.value = '';
+
+            // Focus target day we just scheduled for convenience
+            activeScheduleDay = day;
+            updateActiveScheduleDayTab();
+            renderSchedule();
+        });
+    }
+}
+
+window.toggleScheduleItemCompletion = function (id, event) {
+    if (event) event.stopPropagation();
+    const itemIndex = schedule.findIndex(item => item.id === id);
+    if (itemIndex !== -1) {
+        schedule[itemIndex].completed = !schedule[itemIndex].completed;
+        saveScheduleToStorage();
+
+        const item = schedule[itemIndex];
+        if (item.taskId) {
+            const taskIndex = tasks.findIndex(t => t.id === item.taskId);
+            if (taskIndex !== -1) {
+                tasks[taskIndex].completed = item.completed;
+                saveToStorage();
+
+                if (item.completed) {
+                    const task = tasks[taskIndex];
+                    if (task.reward && task.reward.trim()) {
+                        setTimeout(() => {
+                            const rewardModal = document.getElementById('reward-modal');
+                            const rewardModalTaskTitle = document.getElementById('reward-modal-task-title');
+                            const rewardModalText = document.getElementById('reward-modal-text');
+
+                            if (rewardModal && rewardModalTaskTitle && rewardModalText) {
+                                rewardModalTaskTitle.textContent = `For completing: "${task.title}"`;
+                                rewardModalText.textContent = task.reward;
+                                rewardModal.classList.add('active');
+                                playSound('success');
+
+                                const rect = rewardModal.getBoundingClientRect();
+                                createExplosion(rect.left + rect.width / 2, rect.top + rect.height / 2);
+                            }
+                        }, 350);
+                    }
+                }
+
+                renderBoard();
+            }
+        }
+        
+        if (schedule[itemIndex].completed) {
+            playSound('success');
+            if (event && event.clientX && event.clientY) {
+                createExplosion(event.clientX, event.clientY);
+            }
+        } else {
+            playSound('click');
+        }
+        renderSchedule();
+    }
+};
+
+window.deleteScheduleItem = function (id, event) {
+    if (event) event.stopPropagation();
+    const itemToDelete = schedule.find(item => item.id === id);
+    if (itemToDelete) {
+        const confirmDelete = confirm(`Are you sure you want to delete "${itemToDelete.title}"?`);
+        if (confirmDelete) {
+            schedule = schedule.filter(item => item.id !== id);
+            saveScheduleToStorage();
+            playSound('delete');
+            renderSchedule();
+        }
+    }
+};
+
+
+// ==========================================================================
 // INTERFACE CONTROLS / FILTER HANDLERS
 // ==========================================================================
 function setupUIHandlers() {
@@ -1369,6 +1746,10 @@ function setupUIHandlers() {
                     panel.style.display = 'none';
                 }
             });
+
+            if (target === 'schedule') {
+                renderSchedule();
+            }
 
             playSound('click');
             lucide.createIcons();
@@ -1587,6 +1968,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 9. Draw History elements in Archive tab
     renderHistory();
+
+    // 10. Setup and draw Daily Schedule elements
+    setupScheduleHandlers();
+    renderSchedule();
 
     // Initial render of lucide elements
     lucide.createIcons();

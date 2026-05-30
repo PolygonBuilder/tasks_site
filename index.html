@@ -46,6 +46,10 @@
                     <i data-lucide="heart"></i>
                     <span class="tab-label">Habit Tracker</span>
                 </button>
+                <button class="sidebar-tab" data-tab="schedule">
+                    <i data-lucide="calendar-clock"></i>
+                    <span class="tab-label">Daily Schedule</span>
+                </button>
                 <button class="sidebar-tab" data-tab="notes">
                     <i data-lucide="file-text"></i>
                     <span class="tab-label">Quick Notes</span>
@@ -412,6 +416,138 @@
                                 <!-- Injected dynamically in JS -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PANEL: DAILY SCHEDULE -->
+            <div class="tab-panel" id="panel-schedule" style="display: none;">
+                <header class="app-header">
+                    <div class="header-left">
+                        <div class="logo-area">
+                            <div class="logo-icon" style="background: linear-gradient(135deg, #7f00ff 0%, #ff007f 100%);">
+                                <i data-lucide="calendar-clock"></i>
+                            </div>
+                            <div>
+                                <h1>Daily Schedule</h1>
+                                <p class="tagline">Design your day, hour by hour</p>
+                            </div>
+                        </div>
+                    </div>
+                </header>
+
+                <div class="schedule-split-layout">
+                    <!-- LEFT COLUMN: ADD EVENT FORM -->
+                    <div class="glass-card schedule-form-card">
+                        <h2>Schedule an Activity</h2>
+                        
+                        <form id="schedule-form">
+                            <div class="form-group" id="sched-task-select-container">
+                                <label for="sched-task-select">Link a Weekly Board Task (Optional)</label>
+                                <div class="filter-wrapper" style="width: 100%;">
+                                    <select id="sched-task-select" style="width: 100%; padding-left: 16px;">
+                                        <option value="">-- Select a Task --</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="sched-title-input">Activity Name *</label>
+                                <input type="text" id="sched-title-input" placeholder="e.g. Morning gym session, Deep work" required maxlength="100">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="sched-day-select">Target Day</label>
+                                <div class="filter-wrapper" style="width: 100%;">
+                                    <select id="sched-day-select" style="width: 100%; padding-left: 16px;">
+                                        <option value="monday">Monday</option>
+                                        <option value="tuesday">Tuesday</option>
+                                        <option value="wednesday">Wednesday</option>
+                                        <option value="thursday">Thursday</option>
+                                        <option value="friday">Friday</option>
+                                        <option value="saturday">Saturday</option>
+                                        <option value="sunday">Sunday</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 16px;">
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="sched-time-from">Time From *</label>
+                                    <input type="time" id="sched-time-from" required>
+                                </div>
+                                <div class="form-group" style="flex: 1;">
+                                    <label for="sched-time-to">Time To *</label>
+                                    <input type="time" id="sched-time-to" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label style="margin-bottom: 8px; display: block;">Activity Category</label>
+                                <div class="category-selectors">
+                                    <label class="category-pill-label">
+                                        <input type="radio" name="sched-category" value="work" checked style="display: none;">
+                                        <span class="category-pill work-pill">Work</span>
+                                    </label>
+                                    <label class="category-pill-label">
+                                        <input type="radio" name="sched-category" value="study" style="display: none;">
+                                        <span class="category-pill study-pill">Study</span>
+                                    </label>
+                                    <label class="category-pill-label">
+                                        <input type="radio" name="sched-category" value="health" style="display: none;">
+                                        <span class="category-pill health-pill">Health</span>
+                                    </label>
+                                    <label class="category-pill-label">
+                                        <input type="radio" name="sched-category" value="leisure" style="display: none;">
+                                        <span class="category-pill leisure-pill">Leisure</span>
+                                    </label>
+                                    <label class="category-pill-label">
+                                        <input type="radio" name="sched-category" value="other" style="display: none;">
+                                        <span class="category-pill other-pill">Other</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="primary-btn submit-schedule-btn">
+                                <i data-lucide="plus"></i> Add to Schedule
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- RIGHT COLUMN: VISUAL TIMELINE -->
+                    <div class="glass-card schedule-timeline-card">
+                        <div class="timeline-header-controls">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <h2 id="timeline-agenda-title">Wednesday's Schedule</h2>
+                                <span class="tagline" id="timeline-day-date-label">Schedule View</span>
+                            </div>
+                            
+                            <!-- Day navigation tabs inside the timeline panel -->
+                            <div class="schedule-day-tabs">
+                                <button type="button" class="day-tab-btn" data-day="monday">Mon</button>
+                                <button type="button" class="day-tab-btn" data-day="tuesday">Tue</button>
+                                <button type="button" class="day-tab-btn" data-day="wednesday">Wed</button>
+                                <button type="button" class="day-tab-btn" data-day="thursday">Thu</button>
+                                <button type="button" class="day-tab-btn" data-day="friday">Fri</button>
+                                <button type="button" class="day-tab-btn" data-day="saturday">Sat</button>
+                                <button type="button" class="day-tab-btn" data-day="sunday">Sun</button>
+                            </div>
+                        </div>
+
+                        <!-- TIMELINE WRAPPER (Visual Calendar grid) -->
+                        <div class="timeline-scroll-viewport">
+                            <div class="timeline-grid-relative">
+                                <!-- Grid Lines (Hours 06:00 to 24:00) -->
+                                <div class="timeline-hour-markers" id="timeline-hour-markers-container">
+                                    <!-- Dynamic rows injected in JS -->
+                                </div>
+                                
+                                <!-- Events Overlay container -->
+                                <div id="timeline-events-container">
+                                    <!-- Event blocks absolutely positioned will be injected here -->
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
